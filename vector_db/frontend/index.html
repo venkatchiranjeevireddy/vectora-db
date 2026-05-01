@@ -1,0 +1,507 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vector DB — Semantic Search</title>
+  <style>
+    :root {
+      --bg: #0f0f0f;
+      --panel: #151515;
+      --panel-2: #1a1a1a;
+      --text: #ececec;
+      --muted: #a1a1aa;
+      --border: #27272a;
+      --accent: #6366f1;
+      --accent-soft: rgba(99, 102, 241, 0.18);
+      --ok: #22c55e;
+      --danger: #ef4444;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      color: var(--text);
+      font-family: Inter, Segoe UI, Roboto, Arial, sans-serif;
+      background: radial-gradient(1200px 600px at 10% -10%, #18181b 0%, var(--bg) 55%);
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    .topbar {
+      background: linear-gradient(180deg, #171717, #121212);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 18px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+    }
+
+    .title {
+      font-size: 30px;
+      font-weight: 800;
+      letter-spacing: 0.1px;
+      margin: 0;
+    }
+
+    .subtitle {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .chunk-id {
+      margin-top: 8px;
+      font-size: 12px;
+      color: #9ca3af;
+      letter-spacing: 0.2px;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 30% 70%;
+      gap: 16px;
+      align-items: start;
+    }
+
+    .panel {
+      background: linear-gradient(180deg, var(--panel), var(--panel-2));
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+    }
+
+    .panel h2 {
+      margin: 0 0 12px;
+      font-size: 18px;
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 10px;
+    }
+
+    .row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .file-input,
+    .input {
+      width: 100%;
+      padding: 11px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: #101010;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .input:focus,
+    .file-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-soft);
+    }
+
+    .btn {
+      border: 1px solid transparent;
+      background: linear-gradient(180deg, #7075ff, var(--accent));
+      color: #fff;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.08s ease, filter 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .btn:hover {
+      filter: brightness(1.05);
+    }
+
+    .btn:active {
+      transform: translateY(1px);
+    }
+
+    .status {
+      min-height: 20px;
+      margin-top: 10px;
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    .status.ok {
+      color: var(--ok);
+    }
+
+    .status.err {
+      color: var(--danger);
+    }
+
+    .spinner {
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      border-top-color: #fff;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 8px;
+      vertical-align: -2px;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .stat-box {
+      margin-top: 14px;
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #111111;
+      font-size: 14px;
+      color: var(--muted);
+    }
+    .ai-answer {
+      border: 1px solid #312e81;
+      background: linear-gradient(180deg, rgba(99, 102, 241, 0.22), rgba(79, 70, 229, 0.12));
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+    .ai-title {
+      margin: 0 0 8px;
+      font-size: 15px;
+      font-weight: 700;
+      color: #c7d2fe;
+    }
+    .ai-text {
+      white-space: pre-wrap;
+      line-height: 1.55;
+      color: #eef2ff;
+      font-size: 14px;
+    }
+    .ai-meta {
+      margin-top: 8px;
+      text-align: right;
+      font-size: 12px;
+      color: #a5b4fc;
+    }
+    .sources-title {
+      font-size: 14px;
+      color: var(--muted);
+      margin: 6px 0 10px;
+      font-weight: 600;
+    }
+
+    .question-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .slider {
+      width: 220px;
+      accent-color: var(--accent);
+    }
+
+    .latency {
+      font-size: 13px;
+      color: var(--muted);
+      min-height: 18px;
+      margin-bottom: 8px;
+    }
+
+    .results {
+      display: grid;
+      gap: 10px;
+    }
+
+    .card {
+      border: 1px solid var(--border);
+      background: #131313;
+      border-radius: 12px;
+      padding: 12px;
+      animation: rise 0.22s ease;
+    }
+
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .card-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .rank {
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .score {
+      font-variant-numeric: tabular-nums;
+      color: #c7d2fe;
+    }
+    .score-high { color: #22c55e; }
+    .score-mid { color: #facc15; }
+    .score-low { color: #ef4444; }
+
+    .bar {
+      height: 7px;
+      border-radius: 999px;
+      background: #212121;
+      overflow: hidden;
+      margin-bottom: 8px;
+    }
+
+    .bar > span {
+      display: block;
+      height: 100%;
+      background: linear-gradient(90deg, #7c83ff, var(--accent));
+      width: 0%;
+      transition: width 0.4s ease;
+    }
+
+    .text {
+      white-space: pre-wrap;
+      line-height: 1.55;
+      color: #e5e7eb;
+      font-size: 14px;
+      max-height: 220px;
+      overflow: auto;
+      padding-right: 6px;
+    }
+
+    @media (max-width: 980px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+      .question-row {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="topbar">
+      <h1 class="title">🔍 Vector DB — Semantic Search</h1>
+      <p class="subtitle">Upload any PDF — Research Papers, Books, Reports, Resumes</p>
+    </header>
+
+    <main class="layout">
+      <section class="panel">
+        <h2>Upload PDF</h2>
+        <p class="hint">Extract text, chunk, embed, and index.</p>
+        <p class="hint">Supports any PDF document type</p>
+        <input id="pdfFile" class="file-input" type="file" accept="application/pdf" />
+        <div class="row" style="margin-top:10px;">
+          <button id="uploadBtn" class="btn">Upload PDF</button>
+        </div>
+        <div id="uploadStatus" class="status"></div>
+        <div class="stat-box">
+          <div>Total chunks indexed: <strong id="totalChunks">0</strong></div>
+          <div>Index health: <strong id="indexHealth">empty</strong></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Ask a Question</h2>
+        <div class="question-row">
+          <input id="questionInput" class="input" placeholder="Type your question..." />
+          <button id="askBtn" class="btn">Search</button>
+        </div>
+
+        <div class="controls">
+          <label for="kSlider">k:</label>
+          <input id="kSlider" class="slider" type="range" min="1" max="10" step="1" value="5" />
+          <span id="kValue">5</span>
+        </div>
+
+        <div id="resultsTitle" class="latency"></div>
+        <div id="aiAnswer" class="ai-answer" style="display:none;">
+          <h3 class="ai-title">🤖 AI Answer</h3>
+          <div id="aiAnswerText" class="ai-text"></div>
+          <div id="aiMeta" class="ai-meta"></div>
+        </div>
+        <div id="sourcesTitle" class="sources-title" style="display:none;">📚 Retrieved Sources</div>
+        <div id="latency" class="latency"></div>
+        <div id="results" class="results"></div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    // If opened via FastAPI root, use same-origin.
+    // If opened via static server (e.g. :5500), route API calls to uvicorn (:8000).
+    const API =
+      window.location.port === "8000"
+        ? ""
+        : "http://127.0.0.1:8000";
+
+    const uploadBtn = document.getElementById("uploadBtn");
+    const pdfFile = document.getElementById("pdfFile");
+    const uploadStatus = document.getElementById("uploadStatus");
+    const totalChunksEl = document.getElementById("totalChunks");
+    const indexHealthEl = document.getElementById("indexHealth");
+
+    const askBtn = document.getElementById("askBtn");
+    const questionInput = document.getElementById("questionInput");
+    const kSlider = document.getElementById("kSlider");
+    const kValue = document.getElementById("kValue");
+    const resultsEl = document.getElementById("results");
+    const resultsTitleEl = document.getElementById("resultsTitle");
+    const aiAnswerEl = document.getElementById("aiAnswer");
+    const aiAnswerTextEl = document.getElementById("aiAnswerText");
+    const aiMetaEl = document.getElementById("aiMeta");
+    const sourcesTitleEl = document.getElementById("sourcesTitle");
+    const latencyEl = document.getElementById("latency");
+
+    kSlider.addEventListener("input", () => {
+      kValue.textContent = kSlider.value;
+    });
+
+    function setStatus(el, msg, kind = "") {
+      el.className = `status ${kind}`.trim();
+      el.innerHTML = msg;
+    }
+
+    async function refreshStats() {
+      try {
+        const res = await fetch(`${API}/index-stats`);
+        if (!res.ok) return;
+        const data = await res.json();
+        totalChunksEl.textContent = data.total_chunks ?? 0;
+        indexHealthEl.textContent = data.index_health ?? "unknown";
+      } catch (_) {}
+    }
+
+    uploadBtn.addEventListener("click", async () => {
+      const file = pdfFile.files[0];
+      if (!file) {
+        setStatus(uploadStatus, "Please choose a PDF file first.", "err");
+        return;
+      }
+
+      setStatus(uploadStatus, `<span class="spinner"></span>Indexing PDF...`);
+
+      try {
+        const form = new FormData();
+        form.append("file", file);
+
+        const res = await fetch(`${API}/upload-pdf`, {
+          method: "POST",
+          body: form
+        });
+
+        if (!res.ok) throw new Error(await res.text());
+        const data = await res.json();
+        setStatus(uploadStatus, `✅ Indexed ${data.total_chunks} chunks`, "ok");
+        await refreshStats();
+      } catch (e) {
+        setStatus(uploadStatus, `Upload failed: ${e.message || e}`, "err");
+      }
+    });
+
+    askBtn.addEventListener("click", async () => {
+      const question = questionInput.value.trim();
+      if (!question) {
+        resultsTitleEl.textContent = "";
+        aiAnswerEl.style.display = "none";
+        sourcesTitleEl.style.display = "none";
+        latencyEl.textContent = "";
+        resultsEl.innerHTML = "<div class='card'>Please enter a question.</div>";
+        return;
+      }
+
+      const k = Number(kSlider.value || 5);
+      resultsTitleEl.textContent = "";
+      aiAnswerEl.style.display = "none";
+      sourcesTitleEl.style.display = "none";
+      latencyEl.innerHTML = "<span class='spinner'></span>Searching...";
+      resultsEl.innerHTML = "";
+
+      try {
+        const res = await fetch(`${API}/ask`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            question,
+            k,
+            ef_search: 100
+          })
+        });
+
+        if (!res.ok) throw new Error(await res.text());
+        const data = await res.json();
+
+        const rows = data.results || [];
+        resultsTitleEl.textContent = `Results for: ${data.question || question} • ${rows.length} chunks searched`;
+        latencyEl.textContent = `Latency: ${Number(data.latency_ms || 0).toFixed(2)} ms`;
+
+        aiAnswerTextEl.textContent = data.llm_answer || "No answer generated.";
+        aiMetaEl.textContent = `Latency: ${Number(data.latency_ms || 0).toFixed(2)} ms`;
+        aiAnswerEl.style.display = "block";
+        sourcesTitleEl.style.display = "block";
+
+        if (rows.length === 0) {
+          resultsEl.innerHTML = "<div class='card'>No matching chunks found. Upload a PDF first.</div>";
+          return;
+        }
+
+        resultsEl.innerHTML = "";
+        rows.forEach((row, idx) => {
+          const rawScore = Number(row.score || 0);
+          const pct = Math.max(0, Math.min(100, rawScore * 100));
+          const scoreClass = rawScore > 0.5 ? "score-high" : (rawScore > 0.3 ? "score-mid" : "score-low");
+          const card = document.createElement("article");
+          card.className = "card";
+          card.innerHTML = `
+            <div class="card-head">
+              <span class="rank">#${idx + 1}</span>
+              <span class="score ${scoreClass}">${pct.toFixed(1)}%</span>
+            </div>
+            <div class="bar"><span style="width:${pct.toFixed(1)}%"></span></div>
+            <div class="text">${(row.text || "").replaceAll("<", "&lt;").replaceAll(">", "&gt;")}</div>
+            <div class="chunk-id">${row.chunk_id || ""}</div>
+          `;
+          resultsEl.appendChild(card);
+        });
+      } catch (e) {
+        latencyEl.textContent = "";
+        resultsEl.innerHTML = `<div class="card">Search failed: ${e.message || e}</div>`;
+      }
+    });
+
+    refreshStats();
+  </script>
+</body>
+</html>
+
