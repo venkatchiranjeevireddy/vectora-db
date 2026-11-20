@@ -237,3 +237,37 @@ def test_hnsw_subsequent_insert_copies_caller_owned_vector(monkeypatch):
     original[:] = [9.0, 9.0]
 
     np.testing.assert_array_equal(vectors["second"], [0.0, 1.0])
+
+
+@pytest.mark.parametrize(
+    "invalid_vector",
+    [
+        np.array([[1.0, 2.0]]),
+        np.array(1.0),
+    ],
+)
+def test_hnsw_rejects_non_1d_vectors_without_mutating_graph(invalid_vector):
+    graph = HNSWGraph(M=4, ef_construction=10, max_level=0)
+    vectors = {}
+
+    with pytest.raises(ValueError, match="must be 1D"):
+        insert("invalid", invalid_vector, graph, vectors)
+
+    assert graph.entry_point is None
+    assert graph.levels == {}
+    assert vectors == {}
+
+
+def test_hnsw_rejects_dimension_mismatch_without_mutating_graph(monkeypatch):
+    graph = HNSWGraph(M=4, ef_construction=10, max_level=0)
+    monkeypatch.setattr(graph, "get_random_level", lambda: 0)
+    vectors = {}
+    insert("first", np.array([1.0, 0.0]), graph, vectors)
+
+    with pytest.raises(ValueError, match="Vector dimension mismatch"):
+        insert("invalid", np.array([1.0, 0.0, 0.0]), graph, vectors)
+
+    assert graph.entry_point == "first"
+    assert set(graph.levels) == {"first"}
+    assert set(vectors) == {"first"}
+    np.testing.assert_array_equal(vectors["first"], [1.0, 0.0])
