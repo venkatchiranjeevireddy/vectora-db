@@ -26,6 +26,11 @@ class HNSWGraph:
         self.M = int(M)
         self.ef_construction = int(ef_construction)
 
+        if self.ef_construction <= 0:
+            raise ValueError(
+                f"`ef_construction` must be a positive integer, got {self.ef_construction}"
+            )
+
         if self.M <= 1:
             raise ValueError(f"`M` must be > 1, got {self.M}")
 
