@@ -43,7 +43,10 @@ class VectorStore:
         # Store as float for consistent downstream math.
         # Own the stored buffer so mutations to caller-owned arrays cannot
         # silently change vectors that have already been indexed.
-        self._data[id] = np.array(vec, dtype=float, copy=True)
+        stored = np.array(vec, dtype=float, copy=True)
+        if not np.all(np.isfinite(stored)):
+            raise ValueError("`vector` must contain only finite values")
+        self._data[id] = stored
 
     def add_batch(self, ids, vectors: np.ndarray) -> None:
         """
@@ -72,6 +75,8 @@ class VectorStore:
         # This also prevents later edits to the input matrix from silently
         # changing vectors already present in the store.
         vecs = np.array(vecs, dtype=float, copy=True)
+        if not np.all(np.isfinite(vecs)):
+            raise ValueError("`vectors` must contain only finite values")
         for i, id_ in enumerate(ids):
             self._data[id_] = vecs[i]
 
