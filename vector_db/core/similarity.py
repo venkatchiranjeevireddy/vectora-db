@@ -84,13 +84,14 @@ def top_k_indices(query: np.ndarray, vectors: np.ndarray, k: int) -> np.ndarray:
     # Clamp k so it never exceeds the number of available vectors.
     k = min(k, n)
 
-    # Select top-k candidates using argpartition (no full sorting of all N elements).
-    # -k means "partition such that the k largest elements are moved to the last k slots".
-    candidate_indices = np.argpartition(scores, -k)[-k:]
+    # Use a stable full sort when all vectors are requested. This also
+    # makes equal-score ordering deterministic by preserving input order.
+    if k == n:
+        return np.argsort(-scores, kind="stable")
 
-    # Now sort the candidate indices by their scores descending.
-    # np.argsort sorts ascending, so we reverse the order with [::-1].
-    sorted_topk_indices = candidate_indices[np.argsort(scores[candidate_indices])[::-1]]
+    # Partition only when selecting a proper subset, then sort candidates.
+    candidate_indices = np.argpartition(scores, -k)[-k:]
+    sorted_topk_indices = candidate_indices[np.argsort(-scores[candidate_indices], kind="stable")]
 
     # Return indices of the top-k vectors, sorted by score.
     return sorted_topk_indices
