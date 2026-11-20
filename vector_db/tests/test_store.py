@@ -62,3 +62,14 @@ def test_get_returns_copy_that_cannot_mutate_stored_vector():
     retrieved[0] = 99.0
 
     np.testing.assert_array_equal(store.get("item"), [1.0, 2.0])
+
+
+def test_all_vectors_returns_independent_snapshot():
+    store = VectorStore(dim=2)
+    store.add_batch(["first", "second"], np.array([[1.0, 2.0], [3.0, 4.0]]))
+
+    snapshot = store.all_vectors()
+    snapshot[:, :] = -10.0
+
+    np.testing.assert_array_equal(store.get("first"), [1.0, 2.0])
+    np.testing.assert_array_equal(store.get("second"), [3.0, 4.0])
