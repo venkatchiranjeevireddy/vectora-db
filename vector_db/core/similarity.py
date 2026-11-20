@@ -89,9 +89,19 @@ def top_k_indices(query: np.ndarray, vectors: np.ndarray, k: int) -> np.ndarray:
     if k == n:
         return np.argsort(-scores, kind="stable")
 
-    # Partition only when selecting a proper subset, then sort candidates.
+    # Partition only when selecting a proper subset. If the cutoff score
+    # is tied across the boundary, use a stable sort so lower input indices
+    # win consistently instead of depending on argpartition tie placement.
     candidate_indices = np.argpartition(scores, -k)[-k:]
-    sorted_topk_indices = candidate_indices[np.argsort(-scores[candidate_indices], kind="stable")]
+    cutoff = np.min(scores[candidate_indices])
+    if np.count_nonzero(scores >= cutoff) > k:
+        return np.argsort(-scores, kind="stable")[:k]
+
+    # Sort the selected candidates by descending score, breaking ties by
+    # original index for deterministic output.
+    sorted_topk_indices = candidate_indices[
+        np.lexsort((candidate_indices, -scores[candidate_indices]))
+    ]
 
     # Return indices of the top-k vectors, sorted by score.
     return sorted_topk_indices
