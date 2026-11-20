@@ -68,7 +68,10 @@ class VectorStore:
             )
 
         # Insert each vector; this is storage-level iteration (not numeric computation).
-        vecs = vecs.astype(float, copy=False)
+        # Own each stored vector independently of the caller's batch buffer.
+        # This also prevents later edits to the input matrix from silently
+        # changing vectors already present in the store.
+        vecs = np.array(vecs, dtype=float, copy=True)
         for i, id_ in enumerate(ids):
             self._data[id_] = vecs[i]
 
