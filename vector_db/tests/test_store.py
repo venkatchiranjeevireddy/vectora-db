@@ -93,3 +93,30 @@ def test_invalid_batch_does_not_partially_update_store(ids, vectors):
 
     assert store.all_ids() == ["existing"]
     np.testing.assert_array_equal(store.get("existing"), [7.0, 8.0])
+
+
+@pytest.mark.parametrize("invalid_value", [float("nan"), float("inf"), float("-inf")])
+def test_single_insert_rejects_nonfinite_values_without_mutation(invalid_value):
+    store = VectorStore(dim=2)
+    store.add("existing", np.array([1.0, 2.0]))
+
+    with pytest.raises(ValueError, match="finite values"):
+        store.add("invalid", np.array([invalid_value, 3.0]))
+
+    assert store.all_ids() == ["existing"]
+    np.testing.assert_array_equal(store.get("existing"), [1.0, 2.0])
+
+
+@pytest.mark.parametrize("invalid_value", [float("nan"), float("inf"), float("-inf")])
+def test_batch_insert_rejects_nonfinite_values_atomically(invalid_value):
+    store = VectorStore(dim=2)
+    store.add("existing", np.array([1.0, 2.0]))
+
+    with pytest.raises(ValueError, match="finite values"):
+        store.add_batch(
+            ["valid", "invalid"],
+            np.array([[3.0, 4.0], [invalid_value, 5.0]]),
+        )
+
+    assert store.all_ids() == ["existing"]
+    np.testing.assert_array_equal(store.get("existing"), [1.0, 2.0])
