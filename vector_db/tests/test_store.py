@@ -39,3 +39,16 @@ def test_single_insert_copies_caller_owned_vector():
     original[0] = 99.0
 
     np.testing.assert_array_equal(store.get("item"), [1.0, 2.0])
+
+
+def test_batch_insert_copies_caller_owned_matrix():
+    """Editing the original batch must not change stored vectors."""
+    store = VectorStore(dim=2)
+    original = np.array([[1.0, 2.0], [3.0, 4.0]])
+    store.add_batch(["first", "second"], original)
+
+    original[:, :] = -1.0
+
+    np.testing.assert_array_equal(store.get("first"), [1.0, 2.0])
+    np.testing.assert_array_equal(store.get("second"), [3.0, 4.0])
+    assert store.all_ids() == ["first", "second"]
