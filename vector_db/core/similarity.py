@@ -76,6 +76,11 @@ def top_k_indices(query: np.ndarray, vectors: np.ndarray, k: int) -> np.ndarray:
     # Determine how many vectors we actually have (N).
     n = scores.shape[0]
 
+    # Empty collections have no valid partition index. Return immediately
+    # instead of calling argpartition on an empty array.
+    if n == 0:
+        return np.array([], dtype=int)
+
     # Clamp k so it never exceeds the number of available vectors.
     k = min(k, n)
 
