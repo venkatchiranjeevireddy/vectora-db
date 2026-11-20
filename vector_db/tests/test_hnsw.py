@@ -321,3 +321,32 @@ def test_hnsw_duplicate_insert_preserves_existing_edges(monkeypatch):
     for node_id, neighbors in original_edges.items():
         assert graph.get_neighbors(node_id, 0) == neighbors
     np.testing.assert_array_equal(vectors["first"], [1.0, 0.0])
+
+
+def test_hnsw_rejects_empty_vector_without_mutating_graph():
+    """Empty vectors must never become the first indexed node."""
+    graph = HNSWGraph(M=4, ef_construction=10, max_level=0)
+    vectors = {}
+
+    with pytest.raises(ValueError, match="at least one dimension"):
+        insert("empty", np.array([]), graph, vectors)
+
+    assert graph.entry_point is None
+    assert graph.levels == {}
+    assert vectors == {}
+
+
+def test_hnsw_rejects_empty_vector_after_valid_insertion(monkeypatch):
+    """Rejecting an empty vector must preserve an existing index."""
+    graph = HNSWGraph(M=4, ef_construction=10, max_level=0)
+    monkeypatch.setattr(graph, "get_random_level", lambda: 0)
+    vectors = {}
+    insert("first", np.array([1.0, 0.0]), graph, vectors)
+
+    with pytest.raises(ValueError, match="at least one dimension"):
+        insert("empty", np.array([]), graph, vectors)
+
+    assert graph.entry_point == "first"
+    assert set(graph.levels) == {"first"}
+    assert set(vectors) == {"first"}
+    np.testing.assert_array_equal(vectors["first"], [1.0, 0.0])
