@@ -114,3 +114,44 @@ def test_entry_point_is_set():
     assert graph.entry_point is not None
     assert graph.entry_point in ids
 
+
+
+def test_higher_level_insertion_connects_to_existing_graph(monkeypatch):
+    """A new top-level entry point must not link to itself or isolate old nodes."""
+    graph = HNSWGraph(M=4, ef_construction=10, max_level=3)
+    levels = iter((0, 2))
+    monkeypatch.setattr(graph, "get_random_level", lambda: next(levels))
+    vectors = {}
+
+    insert("first", np.array([1.0, 0.0]), graph, vectors)
+    insert("second", np.array([0.9, 0.1]), graph, vectors)
+
+    assert graph.entry_point == "second"
+    assert "first" in graph.get_neighbors("second", 0)
+    assert "second" in graph.get_neighbors("first", 0)
+    for layer, nodes in enumerate(graph.layers):
+        for node_id in nodes:
+            assert node_id not in graph.get_neighbors(node_id, layer)
+
+
+def test_search_returns_k_when_ef_search_is_smaller(monkeypatch):
+    """A narrow search setting must not silently truncate top-k results."""
+    graph = HNSWGraph(M=4, ef_construction=10, max_level=0)
+    monkeypatch.setattr(graph, "get_random_level", lambda: 0)
+    vectors = {}
+    for node_id, values in (
+        ("a", [1.0, 0.0]),
+        ("b", [0.8, 0.2]),
+        ("c", [0.0, 1.0]),
+    ):
+        insert(node_id, np.array(values), graph, vectors)
+
+    results = hnsw_search(
+        query=np.array([1.0, 0.0]),
+        k=3,
+        graph=graph,
+        vectors=vectors,
+        ef_search=1,
+    )
+    assert len(results) == 3
+    assert len({node_id for node_id, _ in results}) == 3
