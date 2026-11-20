@@ -65,11 +65,15 @@ def hnsw_search(query, k, graph: HNSWGraph, vectors, ef_search: int = 50):
             # Move to the best candidate found at this layer.
             current_entry_point = top[0][0]
 
-    # Final search on layer 0 with wider ef_search.
+    # The candidate beam must be at least as wide as the requested result
+    # count; otherwise ef_search < k silently limits the number returned.
+    search_width = max(k, ef_search)
+
+    # Final search on layer 0 with an adequate candidate width.
     results = search_layer(
         query=query,
         entry_point=current_entry_point,
-        ef=ef_search,
+        ef=search_width,
         layer=0,
         graph=graph,
         vectors=vectors,
