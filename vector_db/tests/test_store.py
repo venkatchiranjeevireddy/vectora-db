@@ -28,3 +28,14 @@ def test_empty_store_preserves_vector_dimension():
 
     assert store.all_vectors().shape == (0, 3)
     assert store.all_ids() == []
+
+
+def test_single_insert_copies_caller_owned_vector():
+    """Changing an input array must not change a previously stored vector."""
+    store = VectorStore(dim=2)
+    original = np.array([1.0, 2.0])
+    store.add("item", original)
+
+    original[0] = 99.0
+
+    np.testing.assert_array_equal(store.get("item"), [1.0, 2.0])
