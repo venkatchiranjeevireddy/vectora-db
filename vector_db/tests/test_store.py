@@ -52,3 +52,13 @@ def test_batch_insert_copies_caller_owned_matrix():
     np.testing.assert_array_equal(store.get("first"), [1.0, 2.0])
     np.testing.assert_array_equal(store.get("second"), [3.0, 4.0])
     assert store.all_ids() == ["first", "second"]
+
+
+def test_get_returns_copy_that_cannot_mutate_stored_vector():
+    store = VectorStore(dim=2)
+    store.add("item", np.array([1.0, 2.0]))
+
+    retrieved = store.get("item")
+    retrieved[0] = 99.0
+
+    np.testing.assert_array_equal(store.get("item"), [1.0, 2.0])
