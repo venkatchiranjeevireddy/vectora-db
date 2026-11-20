@@ -166,6 +166,8 @@ def insert(id, vector: np.ndarray, graph: HNSWGraph, vectors) -> None:
     vector = np.array(vector, dtype=float, copy=True)
     if vector.ndim != 1:
         raise ValueError(f"`vector` must be 1D, got shape {vector.shape}")
+    if vector.size == 0:
+        raise ValueError("`vector` must contain at least one dimension")
     if graph.entry_point is not None:
         expected_dim = np.asarray(vectors[graph.entry_point]).shape[0]
         if vector.shape[0] != expected_dim:
