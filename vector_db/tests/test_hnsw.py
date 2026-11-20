@@ -350,3 +350,18 @@ def test_hnsw_rejects_empty_vector_after_valid_insertion(monkeypatch):
     assert set(graph.levels) == {"first"}
     assert set(vectors) == {"first"}
     np.testing.assert_array_equal(vectors["first"], [1.0, 0.0])
+
+
+def test_hnsw_search_rejects_empty_query(monkeypatch):
+    """An empty query should fail clearly when the index contains vectors."""
+    graph = HNSWGraph(M=4, ef_construction=10, max_level=0)
+    monkeypatch.setattr(graph, "get_random_level", lambda: 0)
+    vectors = {}
+    insert("first", np.array([1.0, 0.0]), graph, vectors)
+
+    with pytest.raises(ValueError, match="at least one dimension"):
+        hnsw_search(np.array([]), k=1, graph=graph, vectors=vectors)
+
+    assert graph.entry_point == "first"
+    assert set(graph.levels) == {"first"}
+    np.testing.assert_array_equal(vectors["first"], [1.0, 0.0])
