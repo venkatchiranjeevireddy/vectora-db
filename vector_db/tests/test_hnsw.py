@@ -210,3 +210,30 @@ def test_graph_accepts_positive_construction_width():
     graph = HNSWGraph(M=4, ef_construction=1, max_level=0)
 
     assert graph.ef_construction == 1
+
+
+def test_hnsw_insert_copies_caller_owned_vector(monkeypatch):
+    """Mutating the original input after indexing must not change search data."""
+    graph = HNSWGraph(M=4, ef_construction=10, max_level=0)
+    monkeypatch.setattr(graph, "get_random_level", lambda: 0)
+    vectors = {}
+    original = np.array([1.0, 2.0])
+
+    insert("first", original, graph, vectors)
+    original[:] = [-5.0, -6.0]
+
+    np.testing.assert_array_equal(vectors["first"], [1.0, 2.0])
+
+
+def test_hnsw_subsequent_insert_copies_caller_owned_vector(monkeypatch):
+    """The same ownership guarantee applies after the entry point exists."""
+    graph = HNSWGraph(M=4, ef_construction=10, max_level=0)
+    monkeypatch.setattr(graph, "get_random_level", lambda: 0)
+    vectors = {}
+    insert("first", np.array([1.0, 0.0]), graph, vectors)
+    original = np.array([0.0, 1.0])
+
+    insert("second", original, graph, vectors)
+    original[:] = [9.0, 9.0]
+
+    np.testing.assert_array_equal(vectors["second"], [0.0, 1.0])
