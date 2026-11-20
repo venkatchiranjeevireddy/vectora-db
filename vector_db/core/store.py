@@ -41,7 +41,9 @@ class VectorStore:
             raise ValueError(f"Vector dimension mismatch: expected D={self.dim}, got D={vec.shape[0]}")
 
         # Store as float for consistent downstream math.
-        self._data[id] = vec.astype(float, copy=False)
+        # Own the stored buffer so mutations to caller-owned arrays cannot
+        # silently change vectors that have already been indexed.
+        self._data[id] = np.array(vec, dtype=float, copy=True)
 
     def add_batch(self, ids, vectors: np.ndarray) -> None:
         """
