@@ -88,7 +88,9 @@ class VectorStore:
 
         if id not in self._data:
             raise KeyError(f"VectorStore has no vector with id={id!r}")
-        return self._data[id]
+        # Return an independent array: callers should not be able to mutate
+        # indexed vectors through a reference obtained from get().
+        return self._data[id].copy()
 
     def all_vectors(self) -> np.ndarray:
         """
