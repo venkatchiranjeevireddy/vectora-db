@@ -19,6 +19,8 @@ class VectorStore:
         """
 
         self.dim = int(dim)
+        if self.dim <= 0:
+            raise ValueError(f"`dim` must be a positive integer, got {self.dim}")
         # Internal storage: id -> vector (np.ndarray of shape (D,))
         self._data = {}
 
