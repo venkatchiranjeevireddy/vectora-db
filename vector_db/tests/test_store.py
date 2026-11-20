@@ -73,3 +73,23 @@ def test_all_vectors_returns_independent_snapshot():
 
     np.testing.assert_array_equal(store.get("first"), [1.0, 2.0])
     np.testing.assert_array_equal(store.get("second"), [3.0, 4.0])
+
+
+@pytest.mark.parametrize(
+    "ids, vectors",
+    [
+        (["only-one"], np.array([[1.0, 2.0], [3.0, 4.0]])),
+        (["first"], np.array([[1.0, 2.0, 3.0]])),
+        (["first"], np.array([1.0, 2.0])),
+    ],
+)
+def test_invalid_batch_does_not_partially_update_store(ids, vectors):
+    """Validation errors must leave existing indexed vectors untouched."""
+    store = VectorStore(dim=2)
+    store.add("existing", np.array([7.0, 8.0]))
+
+    with pytest.raises(ValueError):
+        store.add_batch(ids, vectors)
+
+    assert store.all_ids() == ["existing"]
+    np.testing.assert_array_equal(store.get("existing"), [7.0, 8.0])
