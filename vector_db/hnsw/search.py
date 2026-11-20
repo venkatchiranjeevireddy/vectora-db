@@ -38,6 +38,8 @@ def hnsw_search(query, k, graph: HNSWGraph, vectors, ef_search: int = 50):
         return []
     if graph.entry_point is None:
         return []
+    if query.size == 0:
+        raise ValueError("`query` must contain at least one dimension")
     expected_dim = np.asarray(vectors[graph.entry_point]).shape[0]
     if query.shape[0] != expected_dim:
         raise ValueError(
