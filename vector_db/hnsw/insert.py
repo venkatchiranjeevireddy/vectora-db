@@ -159,6 +159,14 @@ def insert(id, vector: np.ndarray, graph: HNSWGraph, vectors) -> None:
     # Keep an independent numeric buffer: callers may reuse or mutate their
     # input array after insertion, but indexed vectors must remain unchanged.
     vector = np.array(vector, dtype=float, copy=True)
+    if vector.ndim != 1:
+        raise ValueError(f"`vector` must be 1D, got shape {vector.shape}")
+    if graph.entry_point is not None:
+        expected_dim = np.asarray(vectors[graph.entry_point]).shape[0]
+        if vector.shape[0] != expected_dim:
+            raise ValueError(
+                f"Vector dimension mismatch: expected {expected_dim}, got {vector.shape[0]}"
+            )
 
     # Assign a random level for this node using the graph's level distribution.
     level = int(graph.get_random_level())
