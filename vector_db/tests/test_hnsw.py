@@ -297,3 +297,27 @@ def test_hnsw_search_accepts_matching_query_dimension(monkeypatch):
 
     assert len(results) == 1
     assert results[0][0] == "first"
+
+
+def test_hnsw_duplicate_insert_preserves_existing_edges(monkeypatch):
+    """A duplicate ID must not reset connections or overwrite indexed data."""
+    graph = HNSWGraph(M=4, ef_construction=10, max_level=0)
+    monkeypatch.setattr(graph, "get_random_level", lambda: 0)
+    vectors = {}
+    insert("first", np.array([1.0, 0.0]), graph, vectors)
+    insert("second", np.array([0.0, 1.0]), graph, vectors)
+
+    original_edges = {
+        node_id: list(graph.get_neighbors(node_id, 0))
+        for node_id in graph.levels
+    }
+    original_entry_point = graph.entry_point
+
+    with pytest.raises(ValueError, match="already exists"):
+        insert("first", np.array([-1.0, 0.0]), graph, vectors)
+
+    assert graph.entry_point == original_entry_point
+    assert set(graph.levels) == {"first", "second"}
+    for node_id, neighbors in original_edges.items():
+        assert graph.get_neighbors(node_id, 0) == neighbors
+    np.testing.assert_array_equal(vectors["first"], [1.0, 0.0])
