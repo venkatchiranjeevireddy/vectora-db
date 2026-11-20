@@ -197,3 +197,16 @@ def test_neighbor_selection_deduplicates_candidate_ids():
 
     assert selected.count("a") == 1
     assert len(selected) == len(set(selected))
+
+
+@pytest.mark.parametrize("ef_construction", [0, -1, -10])
+def test_graph_rejects_nonpositive_construction_width(ef_construction):
+    """Invalid construction beam widths should fail at initialization."""
+    with pytest.raises(ValueError, match="ef_construction.*positive"):
+        HNSWGraph(M=4, ef_construction=ef_construction)
+
+
+def test_graph_accepts_positive_construction_width():
+    graph = HNSWGraph(M=4, ef_construction=1, max_level=0)
+
+    assert graph.ef_construction == 1
