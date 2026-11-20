@@ -156,6 +156,11 @@ def insert(id, vector: np.ndarray, graph: HNSWGraph, vectors) -> None:
             will also add the new node's vector to this dict.
     """
 
+    # Re-inserting an existing ID would reset its adjacency lists and can
+    # disconnect previously indexed nodes. Reject it before any mutation.
+    if id in graph.levels:
+        raise ValueError(f"Node id={id!r} already exists in the HNSW graph")
+
     # Keep an independent numeric buffer: callers may reuse or mutate their
     # input array after insertion, but indexed vectors must remain unchanged.
     vector = np.array(vector, dtype=float, copy=True)
