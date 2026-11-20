@@ -94,6 +94,12 @@ def select_neighbors_heuristic(query, candidates, M, layer, graph, vectors):
         if len(result_ids) >= M:
             break
 
+        # A candidate can appear more than once in a caller-provided list.
+        # Never emit duplicate neighbor IDs, even if a boosted score makes
+        # the same candidate pass the diversity check again.
+        if cand_id in result_ids:
+            continue
+
         # Always add the first candidate: it establishes an initial direction.
         if not result_ids:
             result_ids.append(cand_id)
