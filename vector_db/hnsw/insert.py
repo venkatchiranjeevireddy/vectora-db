@@ -178,6 +178,10 @@ def insert(id, vector: np.ndarray, graph: HNSWGraph, vectors) -> None:
     # This avoids searching in empty "upper bound" layers.
     existing_top_layer = max(graph.levels.values())
 
+    # Keep the existing entry point for neighbor discovery. Adding a
+    # higher-level node can replace graph.entry_point before it has edges.
+    previous_entry_point = graph.entry_point
+
     # Store the new vector in the vectors dict so searches can reference it.
     vectors[id] = vector
 
@@ -189,12 +193,9 @@ def insert(id, vector: np.ndarray, graph: HNSWGraph, vectors) -> None:
     # graph.add_node() can cap the provided level to graph.max_level.
     assigned_level = graph.levels[id]
 
-    # Important: after adding the node, `graph.entry_point` may change if the new
-    # node received a higher level than the previous entry point.
-    # We must start all subsequent layer searches from this updated entry point,
-    # otherwise we may try to search a layer that the old entry point doesn't
-    # belong to (and then `graph.get_neighbors(...)` would raise KeyError).
-    current_entry_point = graph.entry_point
+    # Search from the previous entry point, which belongs to the existing
+    # graph. The newly inserted node must not select itself as a neighbor.
+    current_entry_point = previous_entry_point
 
     # 1) From the top layer down to node's level + 1: find the closest single node.
     # We do this greedily using search_layer with ef=1 at each higher layer.
@@ -219,11 +220,11 @@ def insert(id, vector: np.ndarray, graph: HNSWGraph, vectors) -> None:
             current_entry_point = top[0][0]
 
     # 2) From node's level down to 0: find ef_construction candidates and connect M neighbors.
-    for layer in range(assigned_level, -1, -1):
-        # Ensure the layer search entry point exists in this layer.
-        # If not, fall back to the new node itself (it always exists in layers <= assigned_level).
+    for layer in range(min(assigned_level, existing_top_layer), -1, -1):
+        # The previous entry point exists in every lower layer. Never fall
+        # back to the unconnected new node during neighbor discovery.
         if current_entry_point not in graph.layers[layer]:
-            current_entry_point = id
+            current_entry_point = previous_entry_point
 
         # Find ef_construction candidates in this layer.
         candidates = search_layer(
@@ -237,6 +238,7 @@ def insert(id, vector: np.ndarray, graph: HNSWGraph, vectors) -> None:
 
         # Diversified neighbor selection is critical for HNSW quality.
         # It avoids choosing a cluster of nearly-identical neighbors.
+        candidates = [(node_id, score) for node_id, score in candidates if node_id != id]
         neighbors_to_link = select_neighbors_heuristic(
             query=vector,
             candidates=candidates,
