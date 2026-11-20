@@ -54,3 +54,25 @@ def test_cosine_similarity_zero_query_returns_zero_scores():
     )
 
     np.testing.assert_array_equal(scores, [0.0, 0.0])
+
+
+def test_top_k_full_collection_preserves_input_order_for_ties():
+    """Equal-score vectors retain insertion order when requesting all rows."""
+    query = np.array([1.0, 0.0])
+    vectors = np.array([
+        [0.0, 1.0],
+        [1.0, 0.0],
+        [0.0, -1.0],
+        [-1.0, 0.0],
+    ])
+
+    indices = top_k_indices(query, vectors, k=len(vectors))
+
+    assert indices.tolist() == [1, 0, 2, 3]
+
+
+def test_top_k_oversized_request_preserves_order_for_ties():
+    query = np.array([1.0, 0.0])
+    vectors = np.array([[0.0, 1.0], [0.0, -1.0]])
+
+    assert top_k_indices(query, vectors, k=20).tolist() == [0, 1]
