@@ -155,3 +155,25 @@ def test_search_returns_k_when_ef_search_is_smaller(monkeypatch):
     )
     assert len(results) == 3
     assert len({node_id for node_id, _ in results}) == 3
+
+
+@pytest.mark.parametrize("sample", [0.0, 1e-300, 0.5, 0.999999])
+def test_random_level_respects_allocated_layers(monkeypatch, sample):
+    """Even extreme random samples must produce an allocated graph level."""
+    graph = HNSWGraph(M=4, max_level=2)
+    monkeypatch.setattr(pyrandom, "random", lambda: sample)
+
+    level = graph.get_random_level()
+
+    assert 0 <= level <= graph.max_level
+    graph.add_node("sampled", level)
+    assert graph.levels["sampled"] == level
+    assert "sampled" in graph.layers[level]
+
+
+def test_random_level_zero_sample_is_capped(monkeypatch):
+    """A zero random sample must not cause a logarithm error."""
+    graph = HNSWGraph(M=4, max_level=1)
+    monkeypatch.setattr(pyrandom, "random", lambda: 0.0)
+
+    assert graph.get_random_level() == 1
