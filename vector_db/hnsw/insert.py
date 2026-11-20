@@ -156,8 +156,9 @@ def insert(id, vector: np.ndarray, graph: HNSWGraph, vectors) -> None:
             will also add the new node's vector to this dict.
     """
 
-    # Convert the vector to a 1D NumPy array for consistency.
-    vector = np.asarray(vector)
+    # Keep an independent numeric buffer: callers may reuse or mutate their
+    # input array after insertion, but indexed vectors must remain unchanged.
+    vector = np.array(vector, dtype=float, copy=True)
 
     # Assign a random level for this node using the graph's level distribution.
     level = int(graph.get_random_level())
