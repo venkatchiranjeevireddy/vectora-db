@@ -65,8 +65,12 @@ class HNSWGraph:
         # Implement the corrected formula exactly as requested by the user:
         #   level = int(-ln(random()) * (1 / ln(M)))
         #   return max(0, level)
-        level = int(-math.log(random.random()) * (1.0 / math.log(self.M)))
-        return max(0, level)
+        # Clamp the sampled level to the allocated graph layers. A sample
+        # outside this range would otherwise disagree with add_node(), which
+        # caps levels when creating adjacency lists.
+        sample = max(random.random(), 1e-300)
+        level = int(-math.log(sample) * (1.0 / math.log(self.M)))
+        return min(self.max_level, max(0, level))
 
     def add_node(self, id: Any, level: int) -> None:
         """
