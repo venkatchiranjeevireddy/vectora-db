@@ -271,3 +271,29 @@ def test_hnsw_rejects_dimension_mismatch_without_mutating_graph(monkeypatch):
     assert set(graph.levels) == {"first"}
     assert set(vectors) == {"first"}
     np.testing.assert_array_equal(vectors["first"], [1.0, 0.0])
+
+
+def test_hnsw_search_rejects_query_dimension_mismatch(monkeypatch):
+    """Query shape errors should be reported before any graph traversal."""
+    graph = HNSWGraph(M=4, ef_construction=10, max_level=0)
+    monkeypatch.setattr(graph, "get_random_level", lambda: 0)
+    vectors = {}
+    insert("first", np.array([1.0, 0.0]), graph, vectors)
+
+    with pytest.raises(ValueError, match="Query dimension mismatch"):
+        hnsw_search(np.array([1.0, 0.0, 0.0]), k=1, graph=graph, vectors=vectors)
+
+    assert graph.entry_point == "first"
+    assert set(graph.levels) == {"first"}
+
+
+def test_hnsw_search_accepts_matching_query_dimension(monkeypatch):
+    graph = HNSWGraph(M=4, ef_construction=10, max_level=0)
+    monkeypatch.setattr(graph, "get_random_level", lambda: 0)
+    vectors = {}
+    insert("first", np.array([1.0, 0.0]), graph, vectors)
+
+    results = hnsw_search(np.array([1.0, 0.0]), k=1, graph=graph, vectors=vectors)
+
+    assert len(results) == 1
+    assert results[0][0] == "first"
