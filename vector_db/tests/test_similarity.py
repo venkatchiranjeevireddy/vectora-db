@@ -76,3 +76,29 @@ def test_top_k_oversized_request_preserves_order_for_ties():
     vectors = np.array([[0.0, 1.0], [0.0, -1.0]])
 
     assert top_k_indices(query, vectors, k=20).tolist() == [0, 1]
+
+
+def test_top_k_subset_tie_at_cutoff_prefers_earlier_indices():
+    """A tied cutoff must choose the first matching vectors consistently."""
+    query = np.array([1.0, 0.0])
+    vectors = np.array([
+        [0.0, 1.0],
+        [0.0, -1.0],
+        [1.0, 0.0],
+        [0.0, 1.0],
+        [-1.0, 0.0],
+    ])
+
+    for _ in range(3):
+        assert top_k_indices(query, vectors, k=3).tolist() == [2, 0, 1]
+
+
+def test_top_k_subset_without_cutoff_ties_remains_score_sorted():
+    query = np.array([1.0, 0.0])
+    vectors = np.array([
+        [-1.0, 0.0],
+        [0.0, 1.0],
+        [1.0, 0.0],
+    ])
+
+    assert top_k_indices(query, vectors, k=2).tolist() == [2, 1]
