@@ -38,6 +38,11 @@ def hnsw_search(query, k, graph: HNSWGraph, vectors, ef_search: int = 50):
         return []
     if graph.entry_point is None:
         return []
+    expected_dim = np.asarray(vectors[graph.entry_point]).shape[0]
+    if query.shape[0] != expected_dim:
+        raise ValueError(
+            f"Query dimension mismatch: expected {expected_dim}, got {query.shape[0]}"
+        )
 
     # Identify the top populated layer in the current graph.
     # (This is based on assigned levels recorded in graph.levels.)
