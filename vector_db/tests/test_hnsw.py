@@ -7,6 +7,7 @@ from vector_db.core.brute_force import BruteForceSearch
 from vector_db.core.store import VectorStore
 from vector_db.hnsw.graph import HNSWGraph
 from vector_db.hnsw.insert import insert
+from vector_db.hnsw.neighbor_selection import select_neighbors_heuristic
 from vector_db.hnsw.search import hnsw_search
 
 
@@ -177,3 +178,22 @@ def test_random_level_zero_sample_is_capped(monkeypatch):
     monkeypatch.setattr(pyrandom, "random", lambda: 0.0)
 
     assert graph.get_random_level() == 1
+
+
+def test_neighbor_selection_deduplicates_candidate_ids():
+    """Repeated candidates must not create duplicate graph edges."""
+    vectors = {
+        "a": np.array([1.0, 0.0]),
+        "b": np.array([0.0, 1.0]),
+    }
+    selected = select_neighbors_heuristic(
+        query=np.array([1.0, 0.0]),
+        candidates=[("a", 2.0), ("a", 1.5), ("b", 0.5)],
+        M=3,
+        layer=0,
+        graph=None,
+        vectors=vectors,
+    )
+
+    assert selected.count("a") == 1
+    assert len(selected) == len(set(selected))
